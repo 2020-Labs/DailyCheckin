@@ -4,9 +4,11 @@
   - 确认姓名列的索引值
 - 第二步：执行脚本
   
-  ```python
-  daliy_check.py -f xxx.csv  -i 7
-  ```
+    ```python
+    daily_checkin.py -f xxx.csv  -i 7
+    or
+    daily_checkin.py --file=xxx.csv  --index=7
+    ```
 - 命令说明：  
   ```shell
   Usage: [-f|-i] [--help|--file=|--index=]
