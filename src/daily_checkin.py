@@ -67,8 +67,9 @@ def do_check():
     #输出结果
     if len(unsummit_list) > 0:
         print('=' * 50)
-        print('未提交名单:')
-        print(unsummit_list)
+        print('## 输出结果：')
+        print(' > 未提交名单:')
+        print('  ', unsummit_list)
     else:
         print('#' * 50)
         print('恭喜！全部提交！！！！')
