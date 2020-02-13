@@ -1,4 +1,4 @@
-'''
+﻿'''
 description:   统计未提交打卡名单
 version: 0.1
 '''
@@ -38,7 +38,7 @@ MEMBERS = [
     '尹超', '付自成', '张永刚', '彭飞', '惠文博', '李增辉', '吴佳琪', '潘建勇', '王帅'
 ]
 
-#表示只统计Network组的人员
+# 表示只统计Network组的人员
 NETWORK = False
 
 if NETWORK:
@@ -49,22 +49,105 @@ XLS_FILE = None
 # 表格里姓名栏的索引值，第1列是0
 NAME_COL_INDEX = 0
 
+KEY_VALUE_MAPS = {
+    '3': {
+        '9': '西安'
+    },
+    '4': {
+        '7': '西安黄区'
+    },
+    '6': {
+        '1': '离开过',
+        '2': '没有离开'
+    },
+    '7': {
+        '1': '具备远程办公条件可远程办公',
+        '2': '无网络、电脑不具备远程办公条件',
+        '3': '工作岗位性质无法远程办公',
+        '4': '身体不适无法远程办公',
+    },
+    '8': {
+        '1': '正常',
+        '2': '感冒咳嗽',
+        '3': '隔离中',
+        '4': '已确诊',
+    },
+    '9': {
+        '1': '正常',
+        '2': '感冒咳嗽',
+        '3': '隔离中',
+        '4': '已确诊',
+        '5': '本人独居',
+    },
+    '10': {
+        '1': '没有',
+        '2': '有，但戴了口罩',
+        '3': '有，但没有戴口罩',
+    },
+    '12': {
+        '1': '是',
+        '2': '否',
+        '-2': '未填',
+    },
+    '13': {
+        '-3': '(跳过)'
+    },
+    '14': {
+        '-3': '(跳过)'
+    },
+    '15': {
+        '1': '是',
+        '2': '否'
+    },
+    '16': {
+        '1': '自驾',
+        '2': '高铁/火车',
+        '3': '大巴',
+        '4': '飞机',
+        '5': '拼车（顺风车）',
+        '-2': '未填',
+    },
+    '18': {
+        '1': '自驾',
+        '2': '拼同事顺风车',
+        '3': '公司班车',
+        '4': '步行',
+        '5': '公共交通',
+        '6': '滴滴/打车'
+    },
+    '20': {
+        '1': '是',
+        '2': '否'
+    },
+    '21': {
+        '1': '是',
+        '2': '否'
+    },
+    '22': {
+        '1': '远程办公',
+        '2': '现场办公',
+        '-3': '(跳过)'
+    }
+
+}
+
 
 def do_check():
-    #收集表格里的人员名单
+    # 收集表格里的人员名单
     with open(XLS_FILE, 'r') as csvfile:
         reader = csv.reader(csvfile)
         summited_list = []
+
         for row in reader:
             summited_list.append(row[NAME_COL_INDEX].strip())
 
-    #检查统计未提交的名单
+    # 检查统计未提交的名单
     unsummit_list = []
     for m in MEMBERS:
         if not m in summited_list:
             unsummit_list.append(m)
 
-    #输出结果
+    # 输出结果
     if len(unsummit_list) > 0:
         print('=' * 50)
         print('## 输出结果：')
@@ -76,6 +159,36 @@ def do_check():
         print('#' * 50)
 
 
+def get_value(key1, key2):
+    value = '';
+    value = KEY_VALUE_MAPS[key1].get(key2)
+    return value
+
+
+def convert_text():
+    output_rows = []
+    with open(XLS_FILE, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+
+        for row in reader:
+            # print(row)
+
+            for k in KEY_VALUE_MAPS:
+                display_text = get_value(k, row[int(k) + 5])
+                if display_text:
+                    row[int(k) + 5] = display_text
+            output_rows.append(row[6:])
+
+
+    #output to csv file
+    output_file = XLS_FILE.replace('.csv', '_output.csv')
+    with open(output_file, 'w', newline="") as file:
+        writer = csv.writer(file)
+        for r in output_rows:
+            print(r)
+            writer.writerow(r)
+
+
 def usage():
     print('Usage: [-f|-i] [--help|--file=|--index=]');
     print('  -f|--file=')
@@ -83,8 +196,9 @@ def usage():
     print('  -i|--index=')
     print('     姓名一栏的索引值，从0算起')
 
+
 def check_arg():
-    global  XLS_FILE,NAME_COL_INDEX
+    global XLS_FILE, NAME_COL_INDEX
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hf:i:", ["help", "file=", "index="]);
 
@@ -104,7 +218,6 @@ def check_arg():
         print("getopt error!");
         usage();
         return False
-
 
     if not XLS_FILE:
         usage();
@@ -129,10 +242,12 @@ def check_arg():
 
     return True
 
+
 if __name__ == '__main__':
     if check_arg():
         print('-' * 50)
         print('XLS_FILE= ', XLS_FILE)
         print('NAME_COL_INDEX =', NAME_COL_INDEX)
         print('-' * 50)
-        do_check()
+        # do_check()
+        convert_text()
