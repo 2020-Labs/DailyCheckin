@@ -105,7 +105,7 @@ KEY_VALUE_MAPS = {
         '3': '大巴',
         '4': '飞机',
         '5': '拼车（顺风车）',
-        '-2': '未填',
+        '-2': '(空)',
     },
     '18': {
         '1': '自驾',
@@ -167,25 +167,72 @@ def get_value(key1, key2):
 
 def convert_text():
     output_rows = []
+    headline = False
+    head_row = []
+
     with open(XLS_FILE, 'r') as csvfile:
         reader = csv.reader(csvfile)
 
         for row in reader:
             # print(row)
+            if not headline:
+                head_row = row[6:]
+                headline = True
+                continue
 
             for k in KEY_VALUE_MAPS:
                 display_text = get_value(k, row[int(k) + 5])
                 if display_text:
                     row[int(k) + 5] = display_text
+
+            new_row = row[6:]
             output_rows.append(row[6:])
 
+    print('检查填写有误的数据：')
+    error_rows1=[]
+    error_rows2=[]
+
+    for new_row in output_rows:
+        if new_row[5] == '没有离开' and new_row[10].find('西安市') < 0:
+            #print(new_row)
+            error_rows1.append(new_row)
+
+        if new_row[11] == '否' and new_row[18].strip() == '(空)':
+            #print(new_row)
+            error_rows2.append(new_row)
+
+
+    QUESTION_ID_IDX = 0
+    QUESTION_NAME_IDX =1
+    QUESTION_6_IDX = 5
+    QUESTION_10_IDX = 19
+
+    if len(error_rows1) > 0:
+        print('问卷中问题6、问题11填写错误的名单：')
+        for r in error_rows1:
+            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
+            #print('   Q: {0}'.format(head_row[QUESTION_6_IDX]))
+            #print('   A: {0}'.format(r[QUESTION_6_IDX]))
+            #print('   Q: {0}'.format(head_row[QUESTION_10_IDX]))
+            #print('   A: {0}'.format(r[QUESTION_10_IDX]))
+
+    print('')
+    if len(error_rows2) > 0:
+        print('问卷中问题12、问题19填写错误的名单：')
+        for r in error_rows2:
+            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
+            #print('   Q: {0}'.format(head_row[11]))
+            #print('   A: {0}'.format(r[11]))
+            #print('   Q: {0}'.format(head_row[18].replace('\n','')))
+            #print('   A: {0}'.format(r[18]))
+    print('检查完毕')
 
     #output to csv file
     output_file = XLS_FILE.replace('.csv', '_output.csv')
     with open(output_file, 'w', newline="") as file:
         writer = csv.writer(file)
+        writer.writerow(head_row)
         for r in output_rows:
-            print(r)
             writer.writerow(r)
 
 
