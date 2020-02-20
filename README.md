@@ -6,7 +6,7 @@
     ```python
     daily_checkin.py -f xxx.xls
     or
-    daily_checkin.py --file=xxx.csv
+    daily_checkin.py --file=xxx.xls
     ```
 - 命令说明：  
   ```shell
