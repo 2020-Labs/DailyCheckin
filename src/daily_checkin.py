@@ -1,9 +1,12 @@
 ﻿'''
 description:   统计未提交打卡名单
-version: 0.1
+version: 0.2
 '''
 
 # README
+import json
+import time
+
 '''
 ## 使用说明
 - 第一步：准备工作
@@ -12,13 +15,13 @@ version: 0.1
 - 第二步：执行脚本
 
   ```python
-  daliy_check.py -f xxx.csv  -i 7
+  daliy_check.py -f xxx.xls  -i 7
   ```
 - 命令说明：  
   ```
   Usage: [-f|-i] [--help|--file=|--index=]
       -f|--file=
-         csv文件路径，如:d:\2020.csv
+         xls文件路径，如:d:\2020.xls
       -i|--index=
          姓名一栏的索引值，从0算起
   ```
@@ -27,6 +30,7 @@ import sys
 import getopt
 import csv
 import os
+import pandas as pd
 
 # 检查的提交的名单
 MEMBERS = [
@@ -35,7 +39,7 @@ MEMBERS = [
     '张胜利', '段恒飞', '何楠', '段东峰', '刘志领', '林洋', '王蕾', '满建超', '屈成栋', '王超迪', '陈民华',
     '田佳佳', '王阿雷', '李帅', '王伟', '成二磊', '麻洋',
     '赵瑾', '常焕利', '苏磊', '何娟娟',
-    '尹超', '付自成', '张永刚', '彭飞', '惠文博', '李增辉', '吴佳琪', '潘建勇', '王帅'
+    '尹超', '付自成', '张永刚', '惠文博', '李增辉', '吴佳琪', '潘建勇', '王帅'
 ]
 
 # 表示只统计Network组的人员
@@ -47,7 +51,7 @@ if NETWORK:
 XLS_FILE = None
 
 # 表格里姓名栏的索引值，第1列是0
-NAME_COL_INDEX = 0
+NAME_COL_INDEX = 7
 
 KEY_VALUE_MAPS = {
     '3': {
@@ -134,12 +138,11 @@ KEY_VALUE_MAPS = {
 
 def do_check():
     # 收集表格里的人员名单
-    with open(XLS_FILE, 'r') as csvfile:
-        reader = csv.reader(csvfile)
-        summited_list = []
+    cols, rows = read_excel()
 
-        for row in reader:
-            summited_list.append(row[NAME_COL_INDEX].strip())
+    summited_list = []
+    for row in rows:
+        summited_list.append(row[NAME_COL_INDEX].strip())
 
     # 检查统计未提交的名单
     unsummit_list = []
@@ -160,8 +163,8 @@ def do_check():
 
 
 def get_value(key1, key2):
-    value = '';
-    value = KEY_VALUE_MAPS[key1].get(key2)
+    value = ''
+    value = KEY_VALUE_MAPS[key1].get(str(key2))
     return value
 
 
@@ -236,6 +239,102 @@ def convert_text():
             writer.writerow(r)
 
 
+def read_excel():
+    df = pd.read_excel(XLS_FILE);
+    columns = []
+    for col in df.columns:
+        columns.append(col.replace('\n',''))
+
+    values = []
+    for v in df.values:
+        values.append(v)
+
+    return columns,values
+
+
+def output_result(cols,rows):
+    print('输出Excel')
+    print('列头共有{0}列'.format(len(cols)))
+    print('数据行共有{0}列'.format(len(rows[0])))
+
+    data = {}
+    for idx in range(len(cols)):
+        col = cols[idx]
+        data[col] = []
+        for val in rows:
+            data[col].append(val[idx])
+
+    df = pd.DataFrame(data, index=range(1, len(rows) + 1))
+
+    output_file = os.path.join(os.path.dirname(XLS_FILE), 'OPPO合作伙伴每日健康打卡4.0v2_{0}.xlsx'.format(time.strftime('%Y-%m-%d', time.localtime())))
+    df.to_excel(output_file)
+
+    print('成功写入文件: {0}'.format(output_file))
+    print('共 {0} 条数据。'.format(len(rows)))
+
+def convrt_text_v2():
+    cols, rows = read_excel()
+
+    #去重 , 多次提交的数据以最后一次为准
+    new_rows = {}
+    for row in rows:
+        key = row[7]
+        new_rows[key] = row
+
+    output_rows = []
+    for row in new_rows.values():
+        for k in KEY_VALUE_MAPS:
+            display_text = get_value(k, row[int(k) + 5])
+            if display_text:
+                row[int(k) + 5] = display_text
+
+        new_row = row[6:]
+        output_rows.append(row[6:])
+
+    check_rows(output_rows)
+
+    output_result(cols[6:], output_rows)
+
+def check_rows(output_rows):
+    QUESTION_ID_IDX = 0
+    QUESTION_NAME_IDX =1
+
+    print('检查填写有误的数据：')
+    error_rows1=[]
+    error_rows2=[]
+
+    for new_row in output_rows:
+        if new_row[5] == '没有离开' and new_row[10].find('西安市') < 0:
+            #print(new_row)
+            error_rows1.append(new_row)
+
+        if new_row[11] == '否' and new_row[18].strip() == '(空)':
+            #print(new_row)
+            error_rows2.append(new_row)
+
+
+    if len(error_rows1) > 0:
+        print('问卷中问题6、问题11填写错误的名单：')
+        for r in error_rows1:
+            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
+            #print('   Q: {0}'.format(head_row[QUESTION_6_IDX]))
+            #print('   A: {0}'.format(r[QUESTION_6_IDX]))
+            #print('   Q: {0}'.format(head_row[QUESTION_10_IDX]))
+            #print('   A: {0}'.format(r[QUESTION_10_IDX]))
+
+    print('')
+    if len(error_rows2) > 0:
+        print('问卷中问题12、问题19填写错误的名单：')
+        for r in error_rows2:
+            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
+            #print('   Q: {0}'.format(head_row[11]))
+            #print('   A: {0}'.format(r[11]))
+            #print('   Q: {0}'.format(head_row[18].replace('\n','')))
+            #print('   A: {0}'.format(r[18]))
+    print('检查完毕')
+    if len(error_rows1) == 0 and len(error_rows2) == 0:
+        print('提交的数据全部正确')
+
 def usage():
     print('Usage: [-f|-i] [--help|--file=|--index=]');
     print('  -f|--file=')
@@ -294,7 +393,6 @@ if __name__ == '__main__':
     if check_arg():
         print('-' * 50)
         print('XLS_FILE= ', XLS_FILE)
-        print('NAME_COL_INDEX =', NAME_COL_INDEX)
         print('-' * 50)
-        # do_check()
-        convert_text()
+        do_check()
+        convrt_text_v2()
