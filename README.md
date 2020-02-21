@@ -14,3 +14,6 @@
       -f|--file=
          Excel文件路径，如:d:\2020.xls
   ```
+## 依赖的三方库
+ - pandas       -- 操作Excel
+ - xlsxwriter   -- 设置Excel格式

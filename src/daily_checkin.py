@@ -267,7 +267,58 @@ def output_result(cols,rows):
     df = pd.DataFrame(data, index=range(1, len(rows) + 1))
 
     output_file = os.path.join(os.path.dirname(XLS_FILE), 'OPPO合作伙伴每日健康打卡4.0v2_{0}.xlsx'.format(time.strftime('%Y-%m-%d', time.localtime())))
-    df.to_excel(output_file)
+    writer = pd.ExcelWriter(output_file,  engine='xlsxwriter')
+
+    df.to_excel(writer, index=False)
+
+    #设置Excel表格格式
+    workbook = writer.book
+    worksheet = writer.sheets['Sheet1']
+    header_format = workbook.add_format({
+        'bold': False,  # 字体加粗
+        'valign': 'top',  # 垂直对齐方式
+        'align': 'left',  # 水平对齐方式
+        'fg_color': '#B4C6E7',  # 单元格背景颜色
+        'border': 1,  # 单元格边框宽度
+        'font_size': 10,
+        'font_name': '微软雅黑'
+        })
+
+
+    cell_format = workbook.add_format({
+        'align': 'left',
+        'border': 1,
+        'font_size': 10,
+        'font_name': '微软雅黑'
+    })
+
+    for col_num, value in enumerate(df.columns.values):
+        worksheet.write(0, col_num, value, header_format)
+
+    for index, value in df.iterrows():
+        worksheet.set_row(index, 18)
+
+    worksheet.set_column(0, len(df.columns.values), cell_format=cell_format)
+
+    #设定第1行的高度
+    worksheet.set_row(0, 20)
+
+    #设定各列的宽度
+    worksheet.set_column("A:A",13)
+    worksheet.set_column("F:F", 20)
+    worksheet.set_column("G:G", 30)
+    worksheet.set_column("K:K", 25)
+    worksheet.set_column("M:N", 20)
+    worksheet.set_column("P:R", 20)
+    worksheet.set_column("S:S", 40)
+    worksheet.set_column("V:V", 25)
+
+    try:
+        writer.save()
+    except Exception as e:
+        print('保存失败，错误信息：', e)
+        print('请确认文件是否已打开。')
+        return
 
     print('成功写入文件: {0}'.format(output_file))
     print('共 {0} 条数据。'.format(len(rows)))
@@ -302,7 +353,7 @@ def check_rows(output_rows):
     print('检查填写有误的数据：')
     error_rows1=[]
     error_rows2=[]
-
+    error_rows3=[]
     for new_row in output_rows:
         if new_row[5] == '没有离开' and new_row[10].find('西安市') < 0:
             #print(new_row)
@@ -311,8 +362,14 @@ def check_rows(output_rows):
         if new_row[11] == '否' and new_row[18].strip() == '(空)':
             #print(new_row)
             error_rows2.append(new_row)
+        if not len(new_row[0]) == 8:
+            error_rows3.append(new_row)
 
-
+    if len(error_rows3) > 0:
+        print('问卷中问题1写错误的名单：（工号填写有误）')
+        for r in error_rows3:
+            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
+    print('')
     if len(error_rows1) > 0:
         print('问卷中问题6、问题11填写错误的名单：')
         for r in error_rows1:
