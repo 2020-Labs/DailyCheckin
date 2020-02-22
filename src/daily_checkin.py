@@ -1,6 +1,6 @@
 ﻿'''
 description:   统计未提交打卡名单
-version: 0.2
+version: 0.4
 '''
 
 # README
@@ -19,11 +19,9 @@ import time
   ```
 - 命令说明：  
   ```
-  Usage: [-f|-i] [--help|--file=|--index=]
+  Usage: [-f] [--help|--file=]
       -f|--file=
          xls文件路径，如:d:\2020.xls
-      -i|--index=
-         姓名一栏的索引值，从0算起
   ```
 '''
 import sys
@@ -55,10 +53,16 @@ NAME_COL_INDEX = 7
 
 KEY_VALUE_MAPS = {
     '3': {
-        '9': '西安'
+        '9': '西安',
+        '*': '西安'
     },
     '4': {
-        '7': '西安黄区'
+        '7': '西安黄区',
+        '*': '西安黄区'
+
+    },
+    '5': {
+        '*': '15'
     },
     '6': {
         '1': '离开过',
@@ -165,6 +169,8 @@ def do_check():
 def get_value(key1, key2):
     value = ''
     value = KEY_VALUE_MAPS[key1].get(str(key2))
+    if not value:
+        value = KEY_VALUE_MAPS[key1].get('*')
     return value
 
 
@@ -266,7 +272,7 @@ def output_result(cols,rows):
 
     df = pd.DataFrame(data, index=range(1, len(rows) + 1))
 
-    output_file = os.path.join(os.path.dirname(XLS_FILE), 'OPPO合作伙伴每日健康打卡4.0v2_{0}.xlsx'.format(time.strftime('%Y-%m-%d', time.localtime())))
+    output_file = os.path.join(os.path.dirname(XLS_FILE), 'OPPO合作伙伴每日健康打卡4.0v2_西安地区_{0}.xlsx'.format(time.strftime('%Y%m%d', time.localtime())))
     writer = pd.ExcelWriter(output_file,  engine='xlsxwriter')
 
     df.to_excel(writer, index=False)
@@ -275,7 +281,6 @@ def output_result(cols,rows):
     workbook = writer.book
     worksheet = writer.sheets['Sheet1']
     header_format = workbook.add_format({
-        'bold': False,  # 字体加粗
         'valign': 'top',  # 垂直对齐方式
         'align': 'left',  # 水平对齐方式
         'fg_color': '#B4C6E7',  # 单元格背景颜色
@@ -283,7 +288,6 @@ def output_result(cols,rows):
         'font_size': 10,
         'font_name': '微软雅黑'
         })
-
 
     cell_format = workbook.add_format({
         'align': 'left',
@@ -296,7 +300,7 @@ def output_result(cols,rows):
         worksheet.write(0, col_num, value, header_format)
 
     for index, value in df.iterrows():
-        worksheet.set_row(index, 18)
+        worksheet.set_row(index, 16)
 
     worksheet.set_column(0, len(df.columns.values), cell_format=cell_format)
 
@@ -304,15 +308,20 @@ def output_result(cols,rows):
     worksheet.set_row(0, 20)
 
     #设定各列的宽度
-    worksheet.set_column("A:A",13)
+    #设置默认列宽
+    worksheet.set_column("B:V", 14)
+    worksheet.set_column("A:A", 13)
     worksheet.set_column("F:F", 20)
-    worksheet.set_column("G:G", 30)
-    worksheet.set_column("K:K", 25)
+    worksheet.set_column("G:G", 23)
+    worksheet.set_column("K:K", 23)
     worksheet.set_column("M:N", 20)
     worksheet.set_column("P:R", 20)
     worksheet.set_column("S:S", 40)
-    worksheet.set_column("V:V", 25)
+    worksheet.set_column("T:T", 16)
+    worksheet.set_column("U:V", 14)
 
+    #固定1行1列
+    worksheet.freeze_panes(1, 1)
     try:
         writer.save()
     except Exception as e:
@@ -322,6 +331,7 @@ def output_result(cols,rows):
 
     print('成功写入文件: {0}'.format(output_file))
     print('共 {0} 条数据。'.format(len(rows)))
+
 
 def convrt_text_v2():
     cols, rows = read_excel()
@@ -346,10 +356,14 @@ def convrt_text_v2():
 
     output_result(cols[6:], output_rows)
 
+
 def check_rows(output_rows):
     QUESTION_ID_IDX = 0
     QUESTION_NAME_IDX =1
-
+    QUESTION_6_IDX = 5
+    QUESTION_11_IDX = 10
+    QUESTION_12_IDX = 11
+    QUESTION_19_IDX = 19
     print('检查填写有误的数据：')
     error_rows1=[]
     error_rows2=[]
@@ -368,22 +382,27 @@ def check_rows(output_rows):
     if len(error_rows3) > 0:
         print('问卷中问题1写错误的名单：（工号填写有误）')
         for r in error_rows3:
-            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
+            print('  "{0}"      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
     print('')
     if len(error_rows1) > 0:
         print('问卷中问题6、问题11填写错误的名单：')
         for r in error_rows1:
-            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
-            #print('   Q: {0}'.format(head_row[QUESTION_6_IDX]))
-            #print('   A: {0}'.format(r[QUESTION_6_IDX]))
-            #print('   Q: {0}'.format(head_row[QUESTION_10_IDX]))
-            #print('   A: {0}'.format(r[QUESTION_10_IDX]))
+            print('  {0}      {1}  6_是否离开西安: {2}   11_当前所在区域: {3}'.format(
+                r[QUESTION_ID_IDX],
+                r[QUESTION_NAME_IDX],
+                r[QUESTION_6_IDX],
+                r[QUESTION_11_IDX]
+            ))
 
     print('')
     if len(error_rows2) > 0:
         print('问卷中问题12、问题19填写错误的名单：')
         for r in error_rows2:
-            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
+            print('  {0}      {1} 12_是否确定返程日期: {2} ， 19_备注: {2}'.format(
+                r[QUESTION_ID_IDX],
+                r[QUESTION_NAME_IDX],
+                r[QUESTION_12_IDX],
+                r[QUESTION_19_IDX]))
             #print('   Q: {0}'.format(head_row[11]))
             #print('   A: {0}'.format(r[11]))
             #print('   Q: {0}'.format(head_row[18].replace('\n','')))
@@ -392,12 +411,11 @@ def check_rows(output_rows):
     if len(error_rows1) == 0 and len(error_rows2) == 0:
         print('提交的数据全部正确')
 
+
 def usage():
-    print('Usage: [-f|-i] [--help|--file=|--index=]');
+    print('Usage: [-f] [--help|--file=]');
     print('  -f|--file=')
-    print('     csv文件路径，如:d:\\2020.csv')
-    print('  -i|--index=')
-    print('     姓名一栏的索引值，从0算起')
+    print('     Excel文件路径，如:d:\\2020.xls')
 
 
 def check_arg():
