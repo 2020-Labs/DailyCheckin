@@ -4,6 +4,7 @@ version: 0.4
 '''
 
 # README
+import copy
 import json
 import time
 
@@ -40,11 +41,6 @@ MEMBERS = [
     '尹超', '付自成', '张永刚', '惠文博', '李增辉', '吴佳琪', '潘建勇', '王帅'
 ]
 
-# 表示只统计Network组的人员
-NETWORK = False
-
-if NETWORK:
-    MEMBERS = ['尚利兵', '王磊', '郭艳雯', '马魁', '王小超', '史发龙', '宋智峰', '刘炳星', '柯艳婷', '王柯权']
 # 数据来源
 XLS_FILE = None
 
@@ -139,6 +135,115 @@ KEY_VALUE_MAPS = {
 
 }
 
+COLUMNS_VALUE_MAPPING = {
+    '3': {
+        '*': '西安'
+    },
+    '4': {
+        '*': '西安黄区'
+    },
+    '5': {
+        '*': '15'
+    },
+    '6': {
+        '1': '离开过',
+        '2': '没有离开'
+    },
+    '7': {
+        '1': '具备远程办公条件可远程办公',
+        '2': '无网络、电脑不具备远程办公条件',
+        '3': '工作岗位性质无法远程办公',
+        '4': '身体不适无法远程办公',
+    },
+    '8': {
+        '1': '已确诊新型肺炎，治疗中',
+        '2': '疑似待确诊（确认接触过患者，并有发烧等疑似症状）',
+        '3': '有被传染可能，医院隔离观察中',
+        '4': '身体暂无异常，自行隔离观察中',
+        '5': '有发烧、咳嗽等症状，经诊断非新型肺炎',
+        '6': '一般感冒症状（低烧（37.3 ~ 38度）或咳嗽等），居家观察中',
+        '7': '身体无异样',
+    },
+    '9': {
+        '1': '已确诊新型肺炎，治疗中',
+        '2': '疑似待确诊（确认接触过患者，并有发烧等疑似症状）',
+        '3': '有被传染可能，医院隔离观察中',
+        '4': '身体暂无异常，自行隔离观察中',
+        '5': '有发烧、咳嗽等症状，经诊断非新型肺炎',
+        '6': '一般感冒症状（低烧（37.3 ~ 38度）或咳嗽等），居家观察中',
+        '7': '身体无异样',
+        '8': '本人独居',
+    },
+    '10': {
+        '1': '有',
+        '2': '没有',
+    },
+    '12': {
+        '1': '是',
+        '2': '否',
+        '-2': '未填',
+    },
+    '13': {
+        '-3': '(跳过)'
+    },
+    '14': {
+        '-3': '(跳过)'
+    },
+    '15': {
+        '1': '是',
+        '2': '否'
+    },
+    '16': {
+        '1': '自驾',
+        '2': '高铁/火车',
+        '3': '大巴',
+        '4': '飞机',
+        '5': '拼车（含顺风车）',
+        '6': '一直在办公城市未曾高开',
+        '-2': '(空)',
+        '-3': '(跳过)'
+    },
+    '18': {
+        '1': '自驾',
+        '2': '拼车同事顺风车',
+        '3': '公司班车',
+        '4': '步行',
+        '5': '网约车/出租车（滴滴、曹操、首汽）',
+    },
+    '19': {
+        '1': '有（确认日期）',
+        '2': '没有',
+    },
+    '20': {
+        '1': '是',
+        '2': '否'
+    },
+    '21': {
+        '1': '封路',
+        '2': '隔离期',
+        '3': '已过隔离期且无准入权限',
+        '4': '无网络',
+        '5': '工作岗位性质无法远程办公',
+        '6': '无VPN权限',
+        '7': '请假',
+        '8': '周末',
+        '9': '已经办公'
+    },
+    '23': {
+        '1': '是',
+        '2': '否'
+    },
+    '24': {
+        '1': '远程办公',
+        '2': '现场办公'
+    },
+    '25': {
+        '1': '是',
+        '2': '否',
+        '*': '否',
+    }
+
+}
 
 def do_check():
     # 收集表格里的人员名单
@@ -168,81 +273,15 @@ def do_check():
 
 def get_value(key1, key2):
     value = ''
-    value = KEY_VALUE_MAPS[key1].get(str(key2))
+    value = COLUMNS_VALUE_MAPPING[key1].get(str(key2))
     if not value:
-        value = KEY_VALUE_MAPS[key1].get('*')
+        value = COLUMNS_VALUE_MAPPING[key1].get('*')
+    if key2 == -2:
+        value = '(空)'
+    elif key2 == -3:
+        value = '[跳过]'
+
     return value
-
-
-def convert_text():
-    output_rows = []
-    headline = False
-    head_row = []
-
-    with open(XLS_FILE, 'r') as csvfile:
-        reader = csv.reader(csvfile)
-
-        for row in reader:
-            # print(row)
-            if not headline:
-                head_row = row[6:]
-                headline = True
-                continue
-
-            for k in KEY_VALUE_MAPS:
-                display_text = get_value(k, row[int(k) + 5])
-                if display_text:
-                    row[int(k) + 5] = display_text
-
-            new_row = row[6:]
-            output_rows.append(row[6:])
-
-    print('检查填写有误的数据：')
-    error_rows1=[]
-    error_rows2=[]
-
-    for new_row in output_rows:
-        if new_row[5] == '没有离开' and new_row[10].find('西安市') < 0:
-            #print(new_row)
-            error_rows1.append(new_row)
-
-        if new_row[11] == '否' and new_row[18].strip() == '(空)':
-            #print(new_row)
-            error_rows2.append(new_row)
-
-
-    QUESTION_ID_IDX = 0
-    QUESTION_NAME_IDX =1
-    QUESTION_6_IDX = 5
-    QUESTION_10_IDX = 19
-
-    if len(error_rows1) > 0:
-        print('问卷中问题6、问题11填写错误的名单：')
-        for r in error_rows1:
-            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
-            #print('   Q: {0}'.format(head_row[QUESTION_6_IDX]))
-            #print('   A: {0}'.format(r[QUESTION_6_IDX]))
-            #print('   Q: {0}'.format(head_row[QUESTION_10_IDX]))
-            #print('   A: {0}'.format(r[QUESTION_10_IDX]))
-
-    print('')
-    if len(error_rows2) > 0:
-        print('问卷中问题12、问题19填写错误的名单：')
-        for r in error_rows2:
-            print('  {0}      {1}'.format(r[QUESTION_ID_IDX], r[QUESTION_NAME_IDX]))
-            #print('   Q: {0}'.format(head_row[11]))
-            #print('   A: {0}'.format(r[11]))
-            #print('   Q: {0}'.format(head_row[18].replace('\n','')))
-            #print('   A: {0}'.format(r[18]))
-    print('检查完毕')
-
-    #output to csv file
-    output_file = XLS_FILE.replace('.csv', '_output.csv')
-    with open(output_file, 'w', newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(head_row)
-        for r in output_rows:
-            writer.writerow(r)
 
 
 def read_excel():
@@ -272,7 +311,7 @@ def output_result(cols,rows):
 
     df = pd.DataFrame(data, index=range(1, len(rows) + 1))
 
-    output_file = os.path.join(os.path.dirname(XLS_FILE), 'OPPO合作伙伴每日健康打卡4.0v2_西安地区_{0}.xlsx'.format(time.strftime('%Y%m%d', time.localtime())))
+    output_file = os.path.join(os.path.dirname(XLS_FILE), 'OPPO合作伙伴每日健康打卡5.0_西安地区_{0}.xlsx'.format(time.strftime('%Y%m%d', time.localtime())))
     writer = pd.ExcelWriter(output_file,  engine='xlsxwriter')
 
     df.to_excel(writer, index=False)
@@ -309,8 +348,9 @@ def output_result(cols,rows):
 
     #设定各列的宽度
     #设置默认列宽
-    worksheet.set_column("B:V", 14)
+    worksheet.set_column("C:Y", 14)
     worksheet.set_column("A:A", 13)
+    worksheet.set_column("B:B", 8)
     worksheet.set_column("F:F", 20)
     worksheet.set_column("G:G", 23)
     worksheet.set_column("K:K", 23)
@@ -318,7 +358,9 @@ def output_result(cols,rows):
     worksheet.set_column("P:R", 20)
     worksheet.set_column("S:S", 40)
     worksheet.set_column("T:T", 16)
-    worksheet.set_column("U:V", 14)
+    worksheet.set_column("U:U", 25)
+    worksheet.set_column("V:V", 40)
+    worksheet.set_column("W:Y", 20)
 
     #固定1行1列
     worksheet.freeze_panes(1, 1)
@@ -333,6 +375,8 @@ def output_result(cols,rows):
     print('共 {0} 条数据。'.format(len(rows)))
 
 
+
+
 def convrt_text_v2():
     cols, rows = read_excel()
 
@@ -340,11 +384,14 @@ def convrt_text_v2():
     new_rows = {}
     for row in rows:
         key = row[7]
-        new_rows[key] = row
+        if key in new_rows.keys():
+            print('重复提交： {0} ,  {1} , 提交时间: {2}'.format(row[6], row[7], row[1]))
+
+        new_rows[key] = copy.deepcopy(row)
 
     output_rows = []
     for row in new_rows.values():
-        for k in KEY_VALUE_MAPS:
+        for k in COLUMNS_VALUE_MAPPING:
             display_text = get_value(k, row[int(k) + 5])
             if display_text:
                 row[int(k) + 5] = display_text
@@ -363,21 +410,27 @@ def check_rows(output_rows):
     QUESTION_6_IDX = 5
     QUESTION_11_IDX = 10
     QUESTION_12_IDX = 11
-    QUESTION_19_IDX = 19
+    QUESTION_21_IDX = 20
+    QUESTION_22_IDX = 21
+    QUESTION_23_IDX = 22
     print('检查填写有误的数据：')
     error_rows1=[]
     error_rows2=[]
     error_rows3=[]
+    error_rows4=[]
     for new_row in output_rows:
-        if new_row[5] == '没有离开' and new_row[10].find('西安市') < 0:
-            #print(new_row)
+        if new_row[QUESTION_6_IDX] == '没有离开' and new_row[QUESTION_11_IDX].find('西安市') < 0:
             error_rows1.append(new_row)
 
-        if new_row[11] == '否' and new_row[18].strip() == '(空)':
-            #print(new_row)
+        if new_row[QUESTION_12_IDX] == '否' and new_row[QUESTION_22_IDX].strip() == '(空)':
             error_rows2.append(new_row)
+
         if not len(new_row[0]) == 8:
             error_rows3.append(new_row)
+
+        if new_row[QUESTION_21_IDX] == '无VPN权限' and new_row[QUESTION_23_IDX] == '是':
+            error_rows4.append(new_row)
+
 
     if len(error_rows3) > 0:
         print('问卷中问题1写错误的名单：（工号填写有误）')
@@ -393,22 +446,30 @@ def check_rows(output_rows):
                 r[QUESTION_6_IDX],
                 r[QUESTION_11_IDX]
             ))
+        print('')
 
-    print('')
     if len(error_rows2) > 0:
-        print('问卷中问题12、问题19填写错误的名单：')
+        print('问卷中问题12、问题22填写错误的名单：')
         for r in error_rows2:
-            print('  {0}      {1} 12_是否确定返程日期: {2} ， 19_备注: {2}'.format(
+            print('  {0}      {1} 12_是否确定返程日期: {2} ， 22_备注: {2}'.format(
                 r[QUESTION_ID_IDX],
                 r[QUESTION_NAME_IDX],
                 r[QUESTION_12_IDX],
-                r[QUESTION_19_IDX]))
-            #print('   Q: {0}'.format(head_row[11]))
-            #print('   A: {0}'.format(r[11]))
-            #print('   Q: {0}'.format(head_row[18].replace('\n','')))
-            #print('   A: {0}'.format(r[18]))
+                r[QUESTION_22_IDX]))
+        print('')
+
+    if len(error_rows4) > 0:
+        print('问卷中问题21、问题23填写错误的名单：')
+        for r in error_rows4:
+            print('  {0}      {1} 21_今天是否办公: {2} ， 23_是否有VPN权限: {2}'.format(
+                r[QUESTION_ID_IDX],
+                r[QUESTION_NAME_IDX],
+                r[QUESTION_21_IDX],
+                r[QUESTION_23_IDX]))
+
     print('检查完毕')
-    if len(error_rows1) == 0 and len(error_rows2) == 0:
+    if len(error_rows1) == 0 and len(error_rows2) == 0\
+            and len(error_rows3) == 0 and len(error_rows4) == 0:
         print('提交的数据全部正确')
 
 
